@@ -125,12 +125,50 @@ export default function MessagesPage() {
       return part.value;
     });
 
+    const sendMessage = async (event, parentId) => {
 
-function MyButton() {
-  return (
-    <button>I'm a button</button>
-  );
-}
+        event.preventDefault();
+        if (!userInput.trim() || !isAuthenticated) return;
+
+        let newMessage = {
+            sender: "User",
+            receiver: "Agent",
+            message: userInput,
+            message_type: "query",
+            inserted_at: new Date().toISOString(),
+            context: contextType
+        };
+
+        setMessages((prevMessages) => [...prevMessages, { role: "User", content: userInput }]);
+        setUserInput("");
+
+        if (parentId) {
+            newMessage = { ...newMessage, parent_id: parentId };
+        }
+
+        try {
+            const response = await httpCallerService.post('/api/trigger-ai', newMessage, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (response.response) {
+                if (response.parent_id) {
+                    setParentId(response.parent_id);
+                }
+                setContextType("old");
+                setMessages((prevMessages) => [
+                    ...prevMessages,
+                    { role: "Hansel", content: response.response },
+                ]);
+            }
+
+        } catch (error) {
+            console.error("Error sending message:", error);
+        }
+    };
 
   return (
       <App theme="ios">
